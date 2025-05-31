@@ -3,6 +3,36 @@ from ultralytics import YOLO
 import cv2
 import os
 import tempfile
+import time
+from botocore.exceptions import ClientError
+
+def ensure_stream_exists(kinesis_client, stream_name, region):
+    try:
+        # Check if stream exists
+        kinesis_client.describe_stream(StreamName=stream_name)
+        print(f"Stream {stream_name} exists")
+    except ClientError as e:
+        if e.response['Error']['Code'] == 'ResourceNotFoundException':
+            print(f"Creating stream {stream_name}")
+            kinesis_client.create_stream(
+                StreamName=stream_name,
+                DataRetentionInHours=24
+            )
+            # Wait for stream to become active
+            while True:
+                try:
+                    desc = kinesis_client.describe_stream(StreamName=stream_name)
+                    if desc['StreamInfo']['Status'] == 'ACTIVE':
+                        break
+                    time.sleep(5)
+                except ClientError:
+                    time.sleep(5)
+        else:
+            raise
+
+# Usage:
+ensure_stream_exists(kinesis, "FireDetectionStream", "ap-southeast-2")
+
 
 # Initialize AWS clients
 kinesis = boto3.client('kinesisvideo')
