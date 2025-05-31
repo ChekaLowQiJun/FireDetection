@@ -3,8 +3,16 @@ from ultralytics import YOLO
 import cv2
 import os
 import tempfile
+import boto3
+import os
 import time
 from botocore.exceptions import ClientError
+
+# Initialize Kinesis client
+kinesis = boto3.client('kinesisvideo',
+                      region_name=os.getenv('AWS_DEFAULT_REGION', 'ap-southeast-2'),
+                      aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
+                      aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY'))
 
 def ensure_stream_exists(kinesis_client, stream_name, region):
     try:
@@ -31,7 +39,12 @@ def ensure_stream_exists(kinesis_client, stream_name, region):
             raise
 
 # Usage:
-ensure_stream_exists(kinesis, "FireDetectionStream", "ap-southeast-2")
+# Set YOLO config directory
+os.makedirs('/root/.config/Ultralytics', exist_ok=True)
+os.environ['YOLO_CONFIG_DIR'] = '/root/.config/Ultralytics'
+
+# Initialize stream
+ensure_stream_exists(kinesis, "FireDetectionStream", os.getenv('AWS_DEFAULT_REGION', 'ap-southeast-2'))
 
 
 # Initialize AWS clients
@@ -77,4 +90,3 @@ with tempfile.TemporaryDirectory() as tmpdir:
         for result in results:
             output_path = f"predictions/{result.path.split('/')[-1]}"
             s3.upload_file(result.path, 'firedetectionveq', output_path)
-    
