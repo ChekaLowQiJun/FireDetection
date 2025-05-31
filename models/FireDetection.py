@@ -70,23 +70,41 @@ stream = media.get_media(
 # Initialize YOLO model
 model = YOLO("models/best (1).pt")
 
-# Process stream
-with tempfile.TemporaryDirectory() as tmpdir:
-    while True:
-        # Read frame from stream
-        frame = stream['Payload'].read(1024*1024)
-        if not frame:
-            break
+# Process stream continuously
+while True:
+    try:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Get fresh media stream
+            response = kinesis.get_data_endpoint(
+                StreamName='FireDetectionStream',
+                APIName='GET_MEDIA'
+            )
+            endpoint = response['DataEndpoint']
+            media = boto3.client('kinesis-video-media', endpoint_url=endpoint)
+            stream = media.get_media(
+                StreamName='FireDetectionStream',
+                StartSelector={'StartSelectorType': 'NOW'}
+            )
             
-        # Save frame to temp file
-        frame_path = os.path.join(tmpdir, 'frame.jpg')
-        with open(frame_path, 'wb') as f:
-            f.write(frame)
-            
-        # Run prediction
-        results = model.predict(frame_path, save=False, show=False)
-        
-        # Save results to S3
-        for result in results:
-            output_path = f"predictions/{result.path.split('/')[-1]}"
-            s3.upload_file(result.path, 'firedetectionveq', output_path)
+            while True:
+                # Read frame from stream
+                frame = stream['Payload'].read(1024*1024)
+                if not frame:
+                    break
+                    
+                # Save frame to temp file
+                frame_path = os.path.join(tmpdir, 'frame.jpg')
+                with open(frame_path, 'wb') as f:
+                    f.write(frame)
+                    
+                # Run prediction
+                results = model.predict(frame_path, save=False, show=False)
+                
+                # Save results to S3
+                for result in results:
+                    output_path = f"predictions/{result.path.split('/')[-1]}"
+                    s3.upload_file(result.path, 'firedetectionveq', output_path)
+                    
+    except Exception as e:
+        print(f"Error processing stream: {e}")
+        time.sleep(5)  # Wait before retrying
