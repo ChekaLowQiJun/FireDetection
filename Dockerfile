@@ -14,12 +14,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application files
 COPY models/ models/
-COPY demo/raw_videos/fire.mp4 demo/raw_videos/
 
 # Set AWS credentials (should be passed as environment variables)
-ENV AWS_ACCESS_KEY_ID=""
-ENV AWS_SECRET_ACCESS_KEY=""
-ENV AWS_DEFAULT_REGION="ap-southeast-1"
+ENV AWS_ACCESS_KEY_ID="AKIA3F4BYIJ2DQSFIKFB"
+ENV AWS_SECRET_ACCESS_KEY="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"
+ENV AWS_DEFAULT_REGION="ap-southeast-2b"
 
 # Run the application
 CMD ["python", "models/FireDetection.py"]
