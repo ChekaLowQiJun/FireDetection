@@ -100,10 +100,17 @@ while True:
                 # Run prediction
                 results = model.predict(frame_path, save=False, show=False)
                 
-                # Save results to S3
+                # Save results to S3 as JSON
                 for result in results:
-                    output_path = f"predictions/{result.path.split('/')[-1]}"
-                    s3.upload_file(result.path, 'firedetectionveq', output_path)
+                    # Convert results to JSON
+                    json_data = result.tojson()
+                    # Create temp JSON file
+                    json_path = os.path.join(tmpdir, 'prediction.json')
+                    with open(json_path, 'w') as f:
+                        f.write(json_data)
+                    # Upload to S3
+                    output_path = f"predictions/{int(time.time())}.json"
+                    s3.upload_file(json_path, 'firedetectionveq', output_path)
                     
     except Exception as e:
         print(f"Error processing stream: {e}")
