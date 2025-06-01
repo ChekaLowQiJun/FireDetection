@@ -43,21 +43,21 @@ def ensure_stream_exists(kinesis_client, stream_name, region):
             raise
 
 # Usage:
-# Set YOLO config directory
-os.makedirs('/root/.config/Ultralytics', exist_ok=True)
-os.environ['YOLO_CONFIG_DIR'] = '/root/.config/Ultralytics'
+# Set YOLO config directory to writable location
+yolo_config_dir = os.path.join(tempfile.gettempdir(), '.config/Ultralytics')
+os.makedirs(yolo_config_dir, exist_ok=True)
+os.environ['YOLO_CONFIG_DIR'] = yolo_config_dir
 
-# Initialize stream
-ensure_stream_exists(kinesis, "FireDetectionStream", os.getenv('AWS_DEFAULT_REGION', 'ap-southeast-2'))
-
-
-# Initialize AWS clients
+# Initialize AWS clients first
 try:
     kinesis = get_aws_client('kinesisvideo')
     s3 = get_aws_client('s3')
 except Exception as e:
     print(f"Failed to initialize AWS clients: {e}")
     exit(1)
+
+# Initialize stream
+ensure_stream_exists(kinesis, "FireDetectionStream", os.getenv('AWS_DEFAULT_REGION', 'ap-southeast-2'))
 
 # Get Kinesis video stream endpoint
 response = kinesis.get_data_endpoint(
