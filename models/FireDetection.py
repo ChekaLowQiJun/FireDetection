@@ -1,18 +1,22 @@
-import boto3
 from ultralytics import YOLO
 import cv2
 import os
 import tempfile
 import boto3
-import os
 import time
+import json
 from botocore.exceptions import ClientError
 
-# Initialize Kinesis client
-kinesis = boto3.client('kinesisvideo',
-                      region_name=os.getenv('AWS_DEFAULT_REGION', 'ap-southeast-2'),
-                      aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
-                      aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY'))
+def get_aws_client(service_name):
+    """Initialize AWS client with proper credentials and error handling"""
+    try:
+        return boto3.client(service_name,
+                          region_name=os.getenv('AWS_DEFAULT_REGION', 'ap-southeast-2'),
+                          aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
+                          aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY'))
+    except Exception as e:
+        print(f"Error initializing AWS {service_name} client: {e}")
+        raise
 
 def ensure_stream_exists(kinesis_client, stream_name, region):
     try:
@@ -48,8 +52,12 @@ ensure_stream_exists(kinesis, "FireDetectionStream", os.getenv('AWS_DEFAULT_REGI
 
 
 # Initialize AWS clients
-kinesis = boto3.client('kinesisvideo')
-s3 = boto3.client('s3')
+try:
+    kinesis = get_aws_client('kinesisvideo')
+    s3 = get_aws_client('s3')
+except Exception as e:
+    print(f"Failed to initialize AWS clients: {e}")
+    exit(1)
 
 # Get Kinesis video stream endpoint
 response = kinesis.get_data_endpoint(
@@ -106,7 +114,7 @@ while True:
                     timestamp = int(time.time())
                     output_path = f"predictions/json/{timestamp}.json"
                     s3.put_object(
-                        Bucket='firedetection',
+                        Bucket='firedetectionveq',
                         Key=output_path,
                         Body=json_data,
                         ContentType='application/json'
