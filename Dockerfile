@@ -16,8 +16,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY models/ models/
 
 # Set AWS credentials (should be passed as environment variables)
-ENV AWS_ACCESS_KEY_ID="AKIA3F4BYIJ2MAPHOD5A"
-ENV AWS_SECRET_ACCESS_KEY="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"
+ENV AWS_ACCESS_KEY_ID="AKIA3F4BYIJ2MPVHDH6C"
+ENV AWS_SECRET_ACCESS_KEY="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"
 ENV AWS_DEFAULT_REGION="ap-southeast-2"
 
 # Run the application

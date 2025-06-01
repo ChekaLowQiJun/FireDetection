@@ -3,16 +3,18 @@ from ultralytics import YOLO
 import cv2
 import os
 import tempfile
+import boto3
+import os
 import time
-import json
 from botocore.exceptions import ClientError
 
-# Set YOLO config to use /tmp instead of /root
-os.makedirs('/tmp/.config/Ultralytics', exist_ok=True)
-os.environ['YOLO_CONFIG_DIR'] = '/tmp/.config/Ultralytics'
+# Initialize Kinesis client
+kinesis = boto3.client('kinesisvideo',
+                      region_name=os.getenv('AWS_DEFAULT_REGION', 'ap-southeast-2'),
+                      aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
+                      aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY'))
 
 def ensure_stream_exists(kinesis_client, stream_name, region):
-    """Ensure Kinesis video stream exists with proper credentials"""
     try:
         # Check if stream exists
         kinesis_client.describe_stream(StreamName=stream_name)
@@ -36,56 +38,18 @@ def ensure_stream_exists(kinesis_client, stream_name, region):
         else:
             raise
 
-def check_aws_credentials():
-    """Check for AWS credentials in standard locations"""
-    # Check environment variables
-    if os.getenv('AWS_ACCESS_KEY_ID') and os.getenv('AWS_SECRET_ACCESS_KEY'):
-        print("Using AWS credentials from environment variables")
-        return True
-    
-    # Check for credentials file
-    if os.path.exists(os.path.expanduser('~/.aws/credentials')):
-        print("Using AWS credentials from ~/.aws/credentials")
-        return True
-    
-    # Check if running on EC2 with IAM role
-    try:
-        boto3.client('sts').get_caller_identity()
-        print("Using AWS credentials from IAM role")
-        return True
-    except:
-        pass
-    
-    return False
+# Usage:
+# Set YOLO config directory
+os.makedirs('/root/.config/Ultralytics', exist_ok=True)
+os.environ['YOLO_CONFIG_DIR'] = '/root/.config/Ultralytics'
 
-# Check credentials before proceeding
-if not check_aws_credentials():
-    print("ERROR: No AWS credentials found")
-    print("Please configure credentials using one of these methods:")
-    print("1. Environment variables:")
-    print("   export AWS_ACCESS_KEY_ID='your_access_key'")
-    print("   export AWS_SECRET_ACCESS_KEY='your_secret_key'")
-    print("   export AWS_DEFAULT_REGION='ap-southeast-2'")
-    print("\n2. ~/.aws/credentials file:")
-    print("   [default]")
-    print("   aws_access_key_id = your_access_key")
-    print("   aws_secret_access_key = your_secret_key")
-    print("   region = ap-southeast-2")
-    print("\n3. IAM role if running on AWS EC2")
-    exit(1)
+# Initialize stream
+ensure_stream_exists(kinesis, "FireDetectionStream", os.getenv('AWS_DEFAULT_REGION', 'ap-southeast-2'))
+
 
 # Initialize AWS clients
-try:
-    kinesis = boto3.client('kinesisvideo',
-                          region_name=os.getenv('AWS_DEFAULT_REGION', 'ap-southeast-2'))
-    s3 = boto3.client('s3',
-                     region_name=os.getenv('AWS_DEFAULT_REGION', 'ap-southeast-2'))
-    
-    # Initialize stream
-    ensure_stream_exists(kinesis, "FireDetectionStream", os.getenv('AWS_DEFAULT_REGION', 'ap-southeast-2'))
-except Exception as e:
-    print(f"AWS initialization failed: {e}")
-    exit(1)
+kinesis = boto3.client('kinesisvideo')
+s3 = boto3.client('s3')
 
 # Get Kinesis video stream endpoint
 response = kinesis.get_data_endpoint(
@@ -133,20 +97,20 @@ while True:
                 with open(frame_path, 'wb') as f:
                     f.write(frame)
                     
-                # Run prediction
+                # Run prediction and convert to JSON
                 results = model.predict(frame_path, save=False, show=False)
                 
-                # Save results to S3 as JSON
+                # Save JSON results to S3
                 for result in results:
-                    # Convert results to JSON
                     json_data = result.tojson()
-                    # Create temp JSON file
-                    json_path = os.path.join(tmpdir, 'prediction.json')
-                    with open(json_path, 'w') as f:
-                        f.write(json_data)
-                    # Upload to S3
-                    output_path = f"predictions/{int(time.time())}.json"
-                    s3.upload_file(json_path, 'firedetectionveq', output_path)
+                    timestamp = int(time.time())
+                    output_path = f"predictions/json/{timestamp}.json"
+                    s3.put_object(
+                        Bucket='firedetection',
+                        Key=output_path,
+                        Body=json_data,
+                        ContentType='application/json'
+                    )
                     
     except Exception as e:
         print(f"Error processing stream: {e}")
