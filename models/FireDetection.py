@@ -10,7 +10,7 @@ def get_aws_client(service_name):
     """Initialize AWS client with proper credentials and error handling"""
     try:
         return boto3.client(service_name,
-                          region_name=os.getenv('AWS_DEFAULT_REGION', 'ap-southeast-2'),
+                          region_name=os.getenv('AWS_DEFAULT_REGION', 'ap-southeast-1'),
                           aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
                           aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY'))
     except Exception as e:
@@ -56,11 +56,11 @@ except Exception as e:
     exit(1)
 
 # Initialize stream
-ensure_stream_exists(kinesis, "FireDetectionStream", os.getenv('AWS_DEFAULT_REGION', 'ap-southeast-1'))
+ensure_stream_exists(kinesis, "veq-cam-2", os.getenv('AWS_DEFAULT_REGION', 'ap-southeast-1'))
 
 # Get Kinesis video stream endpoint
 response = kinesis.get_data_endpoint(
-    StreamName='FireDetectionStream',
+    StreamName='veq-cam-2',
     APIName='GET_MEDIA'
 )
 endpoint = response['DataEndpoint']
@@ -70,7 +70,7 @@ media = boto3.client('kinesis-video-media', endpoint_url=endpoint)
 
 # Get media stream
 stream = media.get_media(
-    StreamName='FireDetectionStream',
+    StreamName='',
     StartSelector={'StartSelectorType': 'NOW'}
 )
 
@@ -83,7 +83,7 @@ while True:
         with tempfile.TemporaryDirectory() as tmpdir:
             # Get fresh media stream
             response = kinesis.get_data_endpoint(
-                StreamName='FireDetectionStream',
+                StreamName='veq-cam-2',
                 APIName='GET_MEDIA'
             )
             endpoint = response['DataEndpoint']
