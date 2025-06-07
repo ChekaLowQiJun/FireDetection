@@ -1,5 +1,4 @@
 from ultralytics import YOLO
-import cv2
 import os
 import tempfile
 import boto3
@@ -57,7 +56,7 @@ except Exception as e:
     exit(1)
 
 # Initialize stream
-ensure_stream_exists(kinesis, "FireDetectionStream", os.getenv('AWS_DEFAULT_REGION', 'ap-southeast-2'))
+ensure_stream_exists(kinesis, "FireDetectionStream", os.getenv('AWS_DEFAULT_REGION', 'ap-southeast-1'))
 
 # Get Kinesis video stream endpoint
 response = kinesis.get_data_endpoint(
@@ -90,7 +89,7 @@ while True:
             endpoint = response['DataEndpoint']
             media = boto3.client('kinesis-video-media', endpoint_url=endpoint)
             stream = media.get_media(
-                StreamName='FireDetectionStream',
+                StreamName='veq-cam-2',
                 StartSelector={'StartSelectorType': 'NOW'}
             )
             

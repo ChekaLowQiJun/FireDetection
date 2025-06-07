@@ -16,7 +16,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY models/ models/
 
 # AWS credentials should be passed as environment variables at runtime
-ENV AWS_DEFAULT_REGION="ap-southeast-2"
+ENV AWS_DEFAULT_REGION="ap-southeast-1"
 
 # Run the application
 CMD ["python", "models/FireDetection.py"]
