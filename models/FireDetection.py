@@ -70,7 +70,7 @@ media = boto3.client('kinesis-video-media', endpoint_url=endpoint)
 
 # Get media stream
 stream = media.get_media(
-    StreamName='',
+    StreamName='veq-cam-2',
     StartSelector={'StartSelectorType': 'NOW'}
 )
 
