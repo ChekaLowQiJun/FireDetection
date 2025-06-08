@@ -10,9 +10,7 @@ def get_aws_client(service_name):
     """Initialize AWS client with proper credentials and error handling"""
     try:
         return boto3.client(service_name,
-                          region_name=os.getenv('AWS_DEFAULT_REGION', 'ap-southeast-1'),
-                          aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
-                          aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY'))
+                          region_name=os.getenv('AWS_DEFAULT_REGION', 'ap-southeast-1'))
     except Exception as e:
         print(f"Error initializing AWS {service_name} client: {e}")
         raise
@@ -113,7 +111,7 @@ while True:
                     timestamp = int(time.time())
                     output_path = f"predictions/json/{timestamp}.json"
                     s3.put_object(
-                        Bucket='firedetectionveq',
+                        Bucket='firedetectionbuckets',
                         Key=output_path,
                         Body=json_data,
                         ContentType='application/json'
